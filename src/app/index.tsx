@@ -132,9 +132,6 @@ export default function Index() {
     <>
       <ScrollView contentContainerStyle={styles.container}>
         <Text style={styles.title}>GymCrowding</Text>
-        <Text style={styles.subtitle}>
-          Live capacity + slot booking backed by Fastify API ({gymApi.baseUrl})
-        </Text>
 
         {isFetchingData ? <ActivityIndicator size="small" color="#0f609b" /> : null}
         {error ? <Text style={styles.inlineError}>{error}</Text> : null}
