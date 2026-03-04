@@ -7,10 +7,3 @@ This folder contains a TypeScript CDK snippet for deploying the Fastify API behi
 
 See `infra/cdk/gym-crowding-stack.ts`.
 
-## Notes
-
-- For production you would add:
-  - CloudWatch alarms and dashboards
-  - WAF and auth (Cognito/JWT)
-  - environment config via SSM/Secrets Manager
-  - CI/CD pipeline and multi-environment stacks
