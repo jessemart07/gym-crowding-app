@@ -65,7 +65,7 @@ Booking uses a **per-slot lock** in `backend/src/bookingLock.ts`, so requests fo
 
 ### Mobile structure
 
-The Expo screen in `src/app/index.tsx` consumes a typed API client (`src/features/gym/api.ts`) and uses reusable typed UI primitives (`CapacityRing`, `StateBanner`) for loading/success/error states.
+The Expo screen in `src/app/index.tsx` consumes a typed API client (`src/api/api.ts`) and uses reusable typed UI primitives (`CapacityRing`, `StateBanner`) for loading/success/error states.
 
 ## 4) Testing
 
@@ -101,4 +101,3 @@ For global low-latency reads:
 3. Keep region-local caches and route users to nearest region.
 4. Add stale-while-revalidate fallback to absorb spikes.
 
-This reduces database pressure and keeps the mobile capacity screen fast during peak concurrency.
