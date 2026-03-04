@@ -1,56 +1,104 @@
-# Welcome to your Expo app 👋
+## 1) Run the Project
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
-
-## Get started
-
-1. Install dependencies
-
-   ```bash
-   npm install
-   ```
-
-2. Start the app
-
-   ```bash
-   npx expo start
-   ```
-
-In the output, you'll find options to open the app in a
-
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
-
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
+### Install dependencies
 
 ```bash
-npm run reset-project
+npm install
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+If your local npm cache has permission issues on macOS, run:
 
-### Other setup steps
+```bash
+sudo npm install
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+### Run backend API
 
-## Learn more
+```bash
+npm run backend:dev
+```
 
-To learn more about developing your project with Expo, look at the following resources:
+API base URL: `http://localhost:3000/api`
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+### Run mobile app
 
-## Join the community
+```bash
+npm start
+```
 
-Join our community of developers creating universal apps.
+Optional API URL override for device testing:
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+```bash
+EXPO_PUBLIC_API_URL=http://<your-ip>:3000/api npm start
+```
+
+### Run tests
+
+```bash
+npm run backend:test
+```
+
+## 2) API Endpoints
+
+- `GET /api/gyms` – list gyms and slots
+- `GET /api/gyms/:id/capacity` – current fullness percentage and slot-level capacity
+- `POST /api/gyms/:id/book` – book a slot (`slotId`, `userId`, optional `idempotencyKey`)
+- `POST /api/debug/reset` – reset in-memory state (debug utility)
+
+## 3) Key Architectural Decisions
+
+### Concurrency safety (no overbooking)
+
+Booking uses a **per-slot lock** in `backend/src/bookingLock.ts`, so requests for the same slot are serialized. The critical section executes read-check-write atomically.
+
+### Repository pattern + mocked persistence
+
+`backend/src/repository.ts` exposes a repository interface with an in-memory implementation. This keeps booking logic decoupled from storage and ready for a real DB later.
+
+### Idempotency
+
+`idempotencyKey` values are stored and replay the original result for retries, preventing duplicate side effects in unstable network conditions.
+
+### Fast capacity path
+
+`GET /capacity` uses a short TTL in-memory cache (5s) for low-latency reads while preserving near-real-time freshness.
+
+### Mobile structure
+
+The Expo screen in `src/app/index.tsx` consumes a typed API client (`src/features/gym/api.ts`) and uses reusable typed UI primitives (`CapacityRing`, `StateBanner`) for loading/success/error states.
+
+## 4) Testing
+
+Critical booking logic is covered with Vitest:
+
+- concurrent burst booking does not exceed capacity
+- idempotency replay returns the original booking result
+
+See `backend/tests/bookingService.test.ts`.
+
+## 5) Trade-offs and Next Improvements
+
+### Current trade-offs
+
+- In-memory state and lock are single-instance only.
+- Lambda adapter is minimal and focused on the case-study scope.
+- CDK snippet is provided as infrastructure code sample, not a full deploy-ready app package.
+
+### What I would improve next
+
+1. Replace in-memory repository with DynamoDB or PostgreSQL.
+2. Enforce concurrency at persistence layer (conditional writes or row locks).
+3. Add auth + user identity propagation.
+4. Add observability (structured logs, trace IDs, metrics/alarms).
+5. Add integration tests for API routes and contract validation.
+
+## 6) Bonus: ElastiCache Strategy for Global `GET /capacity`
+
+For global low-latency reads:
+
+1. Cache each gym capacity payload in Redis with a short TTL (e.g., 3-5s).
+2. Use write-through invalidation on successful booking events.
+3. Keep region-local caches and route users to nearest region.
+4. Add stale-while-revalidate fallback to absorb spikes.
+
+This reduces database pressure and keeps the mobile capacity screen fast during peak concurrency.
